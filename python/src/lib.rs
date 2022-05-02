@@ -2,29 +2,31 @@
 
 extern crate pyo3;
 
-use chrono::{DateTime, FixedOffset, Utc};
-use deltalake::action;
-use deltalake::action::Action;
-use deltalake::action::{ColumnCountStat, ColumnValueStat, DeltaOperation, SaveMode, Stats};
-use deltalake::arrow::datatypes::Schema as ArrowSchema;
-use deltalake::get_backend_for_uri;
-use deltalake::partitions::PartitionFilter;
-use deltalake::storage;
-use deltalake::DeltaDataTypeLong;
-use deltalake::DeltaDataTypeTimestamp;
-use deltalake::DeltaTableMetaData;
-use deltalake::DeltaTransactionOptions;
-use deltalake::{arrow, StorageBackend};
-use pyo3::create_exception;
-use pyo3::exceptions::PyException;
-use pyo3::exceptions::PyValueError;
-use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyTuple, PyType};
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
+
+use chrono::{DateTime, FixedOffset, Utc};
+use pyo3::create_exception;
+use pyo3::exceptions::PyException;
+use pyo3::exceptions::PyValueError;
+use pyo3::prelude::*;
+use pyo3::types::{PyBytes, PyTuple, PyType};
+
+use deltalake::{arrow, StorageBackend};
+use deltalake::action;
+use deltalake::action::{ColumnCountStat, ColumnValueStat, DeltaOperation, SaveMode, Stats};
+use deltalake::action::Action;
+use deltalake::arrow::datatypes::Schema as ArrowSchema;
+use deltalake::DeltaDataTypeLong;
+use deltalake::DeltaDataTypeTimestamp;
+use deltalake::DeltaTableMetaData;
+use deltalake::DeltaTransactionOptions;
+use deltalake::get_backend_for_uri;
+use deltalake::partitions::PartitionFilter;
+use deltalake::storage;
 
 create_exception!(deltalake, PyDeltaTableError, PyException);
 
@@ -251,7 +253,7 @@ impl RawDeltaTable {
                 .map_err(PyDeltaTableError::from_arrow)?
                 .to_json(),
         )
-        .map_err(|_| PyDeltaTableError::new_err("Got invalid table schema"))
+            .map_err(|_| PyDeltaTableError::new_err("Got invalid table schema"))
     }
 
     pub fn update_incremental(&mut self) -> PyResult<()> {
@@ -377,12 +379,12 @@ fn filestats_to_expression<'py>(
                 .clone()
                 .into_py(py);
             let converted_value = pa
-                .call_method1("scalar", (value,))?
-                .call_method1("cast", (column_type,))?;
+                .call_method1("scalar", (value, ))?
+                .call_method1("cast", (column_type, ))?;
             expressions.push(
                 field
-                    .call1((column,))?
-                    .call_method1("__eq__", (converted_value,)),
+                    .call1((column, ))?
+                    .call_method1("__eq__", (converted_value, )),
             );
         }
     }
@@ -394,14 +396,14 @@ fn filestats_to_expression<'py>(
             // Blocked on https://issues.apache.org/jira/browse/ARROW-11259
             _ => None,
         }) {
-            expressions.push(field.call1((column,))?.call_method1("__ge__", (minimum,)));
+            expressions.push(field.call1((column, ))?.call_method1("__ge__", (minimum, )));
         }
 
         for (column, maximum) in stats.max_values.iter().filter_map(|(k, v)| match v {
             ColumnValueStat::Value(val) => Some((k.clone(), json_value_to_py(val, py))),
             _ => None,
         }) {
-            expressions.push(field.call1((column,))?.call_method1("__le__", (maximum,)));
+            expressions.push(field.call1((column, ))?.call_method1("__le__", (maximum, )));
         }
 
         for (column, null_count) in stats.null_count.iter().filter_map(|(k, v)| match v {
@@ -409,11 +411,11 @@ fn filestats_to_expression<'py>(
             _ => None,
         }) {
             if *null_count == stats.num_records {
-                expressions.push(field.call1((column.clone(),))?.call_method0("is_null"));
+                expressions.push(field.call1((column.clone(), ))?.call_method0("is_null"));
             }
 
             if *null_count == 0 {
-                expressions.push(field.call1((column.clone(),))?.call_method0("is_valid"));
+                expressions.push(field.call1((column.clone(), ))?.call_method0("is_valid"));
             }
         }
     }
@@ -423,7 +425,7 @@ fn filestats_to_expression<'py>(
     } else {
         expressions
             .into_iter()
-            .reduce(|accum, item| accum?.getattr("__and__")?.call1((item?,)))
+            .reduce(|accum, item| accum?.getattr("__and__")?.call1((item?, )))
             .transpose()
     }
 }
@@ -461,6 +463,14 @@ impl DeltaStorageFsBackend {
             .block_on(self._storage.get_obj(path))
             .map_err(PyDeltaTableError::from_storage)?;
         Ok(PyBytes::new(py, &obj))
+    }
+
+    fn put_obj<'py>(&mut self, _py: Python<'py>, path: &str, obj_bytes: &'py PyBytes) -> PyResult<()> {
+        let bytes = obj_bytes.as_bytes();
+        rt()?
+            .block_on(self._storage.put_obj(path, bytes))
+            .map_err(PyDeltaTableError::from_storage)?;
+        Ok(())
     }
 }
 
@@ -525,12 +535,16 @@ fn write_new_deltalake(
     description: Option<String>,
     configuration: Option<HashMap<String, Option<String>>>,
 ) -> PyResult<()> {
+    println!("Hello from rust");
+
     let mut table = deltalake::DeltaTable::new(
         &table_uri,
         get_backend_for_uri(&table_uri).map_err(PyDeltaTableError::from_storage)?,
         deltalake::DeltaTableConfig::default(),
     )
-    .map_err(PyDeltaTableError::from_raw)?;
+        .map_err(PyDeltaTableError::from_raw)?;
+
+    println!("table was parsed {:?}", table);
 
     let metadata = DeltaTableMetaData::new(
         name,

@@ -5,7 +5,7 @@ import random
 import sys
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Union
 from unittest.mock import Mock
 
 import pyarrow as pa
@@ -19,6 +19,23 @@ from pyarrow.lib import RecordBatchReader
 from deltalake import DeltaTable, write_deltalake
 from deltalake.table import ProtocolVersions
 from deltalake.writer import DeltaTableProtocolError
+from deltalake.deltalake import write_new_deltalake 
+
+import deltalake
+import os
+import json
+import uuid
+from dataclasses import dataclass
+from datetime import date, datetime
+from decimal import Decimal
+from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Union
+
+import pandas as pd
+import pyarrow as pa
+import pyarrow.dataset as ds
+import pyarrow.fs as pa_fs
+from pyarrow.lib import RecordBatchReader
+from typing_extensions import Literal
 
 
 def _is_old_glibc_version():
@@ -389,3 +406,4 @@ def test_writer_with_options(tmp_path: pathlib.Path):
     )
 
     assert table == data
+

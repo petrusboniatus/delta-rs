@@ -14,6 +14,7 @@ from typing_extensions import Literal
 
 from .deltalake import PyDeltaTableError
 from .deltalake import write_new_deltalake as _write_new_deltalake
+from .fs import DeltaStorageHandler
 from .table import DeltaTable
 
 
@@ -154,7 +155,15 @@ def write_deltalake(
     def visitor(written_file: Any) -> None:
         partition_values = get_partitions_from_path(table_uri, written_file.path)
         stats = get_file_stats_from_metadata(written_file.metadata)
-
+        print(f"written_file {written_file}")
+        path = written_file.path
+        buff: pa.BufferOutputStream = filesystem.handler.buff_pool[path]
+        buff.close()
+        bytes = buff.getvalue().to_pybytes()
+        print(path)
+        print(bytes)
+        result = filesystem.handler._storage.put_obj(path, bytes)
+        print(result)
         add_actions.append(
             AddAction(
                 written_file.path,
@@ -181,6 +190,7 @@ def write_deltalake(
         max_rows_per_file=max_rows_per_file,
         min_rows_per_group=min_rows_per_group,
         max_rows_per_group=max_rows_per_group,
+        filesystem = filesystem
     )
 
     if table is None:

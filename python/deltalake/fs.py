@@ -13,6 +13,7 @@ class DeltaStorageHandler(FileSystemHandler):
 
     def __init__(self, table_uri: str) -> None:
         self._storage = DeltaStorageFsBackend(table_uri)
+        self.buff_pool = {}
 
     def __eq__(self, other: Any) -> bool:
         return NotImplemented
@@ -59,7 +60,7 @@ class DeltaStorageHandler(FileSystemHandler):
         """
         raise NotImplementedError
 
-    def create_dir(self, path: str, *, recursive: bool = True) -> None:
+    def create_dir(self, path: str, sample: str, *, recursive: bool = True) -> None:
         """
         Create a directory and subdirectories.
 
@@ -68,7 +69,7 @@ class DeltaStorageHandler(FileSystemHandler):
         :param path: The path of the new directory.
         :param recursive: Create nested directories as well.
         """
-        raise NotImplementedError
+        pass
 
     def delete_dir(self, path: str) -> None:
         """
@@ -146,6 +147,7 @@ class DeltaStorageHandler(FileSystemHandler):
         :param source: The source to open for reading.
         :return:  NativeFile
         """
+        print(path)
         raw = self._storage.get_obj(path)
         return pa.BufferReader(pa.py_buffer(raw))
 
@@ -161,7 +163,9 @@ class DeltaStorageHandler(FileSystemHandler):
         :param metadata: If not None, a mapping of string keys to string values.
         :return:  NativeFile
         """
-        raise NotImplementedError
+        s = pa.BufferOutputStream()
+        self.buff_pool[path] = s
+        return s
 
     def open_append_stream(
         self, path: str, metadata: Optional[Dict[str, Any]] = None
